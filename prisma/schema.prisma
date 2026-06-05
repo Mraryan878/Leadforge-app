@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(SALES_USER)
+  notes     Note[]
+  stageChanges StageHistory[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Business {
+  id            String         @id @default(cuid())
+  name          String         @map("business_name")
+  category      String?
+  website       String?
+  email         String?
+  phone         String?
+  country       String?
+  state         String?
+  city          String?
+  address       String?
+  websiteStatus WebsiteStatus  @default(UNKNOWN) @map("website_status")
+  notes         Note[]
+  pipelineLead  LeadPipeline?
+  stageHistory  StageHistory[]
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  @@map("businesses")
+}
+
+model PipelineStage {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  position  Int
+  leads     LeadPipeline[]
+  fromStages StageHistory[] @relation("fromStage")
+  toStages   StageHistory[] @relation("toStage")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("pipeline_stages")
+}
+
+model LeadPipeline {
+  id         String        @id @default(cuid())
+  business   Business      @relation(fields: [businessId], references: [id])
+  businessId String        @unique @map("business_id")
+  stage      PipelineStage @relation(fields: [stageId], references: [id])
+  stageId    Int           @map("stage_id")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+
+  @@map("lead_pipeline")
+}
+
+model Note {
+  id         String   @id @default(cuid())
+  content    String   @db.Text
+  business   Business @relation(fields: [businessId], references: [id])
+  businessId String   @map("business_id")
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String   @map("user_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("notes")
+}
+
+model StageHistory {
+  id         String        @id @default(cuid())
+  business   Business      @relation(fields: [businessId], references: [id])
+  businessId String        @map("business_id")
+  fromStage  PipelineStage @relation("fromStage", fields: [fromStageId], references: [id])
+  fromStageId Int          @map("from_stage_id")
+  toStage    PipelineStage @relation("toStage", fields: [toStageId], references: [id])
+  toStageId  Int           @map("to_stage_id")
+  changedBy  User          @relation(fields: [changedById], references: [id])
+  changedById String       @map("changed_by_id")
+  createdAt  DateTime      @default(now()) @map("created_at")
+  notes      String?       @db.Text
+
+  @@map("stage_history")
+}
+
+enum Role {
+  ADMIN
+  SALES_USER
+}
+
+enum WebsiteStatus {
+  HAS_WEBSITE
+  NO_WEBSITE
+  NOT_WORKING
+  UNKNOWN
+}
